@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GridMST – light up the city with the least wire</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#e8eef2;--panel:#fff;--ink:#10212c;--muted:#566a78;--line:#cbd6dd;--map:#f1f5f8;--grid:#dde5ea;--grid2:#c9d5dd;--wire:#1d4ed8;--onwire:#fff;--flow:#fff;--lit:#f5a300;--unlit:#aab9c4;--bad:#c0392b;--good:#0a7a52;--river:#8dbbe8;
+--head:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif;--body:'Public Sans','Segoe UI',system-ui,sans-serif;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#06121a;--panel:#0d2230;--ink:#e7f1f6;--muted:#8aa5b4;--line:#1b3a4b;--map:#0a1d29;--grid:#10293a;--grid2:#17394d;--wire:#3ee6c4;--onwire:#04202a;--flow:#e8fffa;--lit:#ffc247;--unlit:#2c4858;--bad:#ff6b5e;--good:#4be3a8;--river:#14405c}}
+:root[data-theme="dark"]{--bg:#06121a;--panel:#0d2230;--ink:#e7f1f6;--muted:#8aa5b4;--line:#1b3a4b;--map:#0a1d29;--grid:#10293a;--grid2:#17394d;--wire:#3ee6c4;--onwire:#04202a;--flow:#e8fffa;--lit:#ffc247;--unlit:#2c4858;--bad:#ff6b5e;--good:#4be3a8;--river:#14405c}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--body)}
+.app{max-width:1440px;margin:0 auto;padding:18px}
+header{display:flex;align-items:center;gap:16px;margin-bottom:14px}
+.brand{display:flex;align-items:center;gap:10px}h1{font:700 28px/1 var(--head);margin:0;letter-spacing:-.02em}
+header p{margin:0;color:var(--muted);flex:1}
+main{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:18px;align-items:start}
+.map{position:relative;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:var(--map)}
+#cv{display:block;width:100%;height:auto;touch-action:none;user-select:none}
+.glass{background:color-mix(in srgb,var(--panel) 82%,transparent);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.hud{position:absolute;top:12px;left:12px;display:flex;gap:8px;flex-wrap:wrap;z-index:2}
+#status{position:absolute;left:12px;bottom:12px;margin:0;max-width:calc(100% - 24px);padding:6px 14px;border-radius:999px;border:1px solid var(--line);font-weight:500;z-index:2}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+h2{font:600 16px/1.2 var(--head);margin:20px 0 10px}h2:first-child{margin-top:0}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;border-radius:0;border-right:1px solid var(--line);background:transparent}.seg button:last-child{border:0}
+.seg .on{background:var(--wire);color:var(--onwire);font-weight:600}
+button{font:500 14px var(--body);padding:7px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);cursor:pointer}
+.hud>button{background:color-mix(in srgb,var(--panel) 82%,transparent)}
+button:hover:not(:disabled){border-color:var(--wire)}button:disabled{opacity:.45;cursor:not-allowed}
+button.primary{background:var(--wire);border-color:var(--wire);color:var(--onwire);font-weight:600;flex:1;padding:10px 14px}
+:is(button,input,select):focus-visible{outline:3px solid var(--lit);outline-offset:2px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}.chips button{border-radius:999px;padding:5px 12px;font-size:13px}
+label{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:500;color:var(--muted);margin-bottom:10px;flex:1;min-width:0}
+input:not([type=checkbox]):not([type=range]),select{font:15px var(--body);padding:7px 9px;border:1px solid var(--line);border-radius:10px;background:var(--map);color:var(--ink);width:100%}
+input[type=range]{accent-color:var(--wire);width:100%}
+.row{display:flex;gap:8px;align-items:flex-end}.wrap{flex-wrap:wrap}
+.chk{flex-direction:row;align-items:center;gap:8px;font-size:14px;color:var(--ink);margin:2px 0 8px}
+#msg{margin:8px 0 0;font-weight:500}.good{color:var(--good)!important}.bad{color:var(--bad)!important}.muted{color:var(--muted);margin:0}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.tile{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--map)}
+.tile b{display:block;font:700 24px/1.1 var(--head);font-variant-numeric:tabular-nums}.tile span{font-size:12px;color:var(--muted)}
+.bars>div{display:grid;grid-template-columns:86px 1fr 64px;gap:8px;align-items:center;font-size:13px;margin-bottom:6px}
+.bars i{display:block;height:8px;border-radius:4px;background:var(--unlit);transition:width .4s}.bars>div:last-child i{background:var(--wire)}.bars em{font-style:normal;text-align:right;font-variant-numeric:tabular-nums}
+.tw{max-height:170px;overflow:auto;border:1px solid var(--line);border-radius:10px;margin-top:10px}table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:5px 10px;text-align:left;border-bottom:1px solid var(--line)}td:last-child,th:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.draw{stroke-dasharray:1;animation:draw .4s ease-out both}@keyframes draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+.flow{animation:flow 1s linear infinite}@keyframes flow{to{stroke-dashoffset:-18}}
+.ring{transform-box:fill-box;transform-origin:center;animation:ring 2.4s ease-out infinite}@keyframes ring{from{transform:scale(.8);opacity:.7}to{transform:scale(2.6);opacity:0}}
+@media (prefers-reduced-motion:reduce){.draw,.flow,.ring{animation:none}}
+@media (max-width:980px){main{grid-template-columns:1fr}header p{display:none}header .brand{flex:1}}
+@media (max-width:700px){.hud,#status{position:static;margin:8px}#status{border-radius:10px;max-width:none}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="brand"><svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><polygon points="15,2 26,8.5 26,21.5 15,28 4,21.5 4,8.5" fill="var(--lit)"/><path d="M16.5 7 9 16h5l-1.500 7L21 14h-5z" fill="var(--map)"/></svg><h1>GridMST</h1></div>
+  <p>Light up every building with the least wire.</p>
+  <button id="theme">Day</button>
+</header>
+<main>
+<section class="map">
+  <div class="hud">
+    <div class="seg glass" id="tools"><button data-tool="source">Add source</button><button data-tool="building" class="on">Add building</button><button data-tool="select">Move</button></div>
+    <button id="del" disabled>Delete selected</button>
+  </div>
+  <svg id="cv" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 640" width="1000" height="640" role="img" aria-label="Night map of a power grid. Click to place nodes, drag to move them."></svg>
+  <p id="status" class="glass" role="status" aria-live="polite"></p>
+</section>
+<aside class="panel">
+  <h2>Start from</h2>
+  <div class="chips" id="pre"><button data-pre="village">Village</button><button data-pre="campus">Campus</button><button data-pre="ring">Ring city</button><button data-pre="random">Random 14</button><button data-pre="clear">Clear</button></div>
+  <h2>Solve</h2>
+  <div class="seg" id="algs" style="display:flex;margin-bottom:10px"><button data-alg="kruskal" style="flex:1">Kruskal</button><button data-alg="prim" style="flex:1">Prim</button></div>
+  <div class="row"><label>Max wire length (m)<input id="max" inputmode="decimal" placeholder="no limit"></label><label>Cost per meter (₹)<input id="rate" type="number" min="0"></label></div>
+  <label class="chk"><input type="checkbox" id="river"> River: crossing costs ×2.5</label>
+  <label>Animation speed<input type="range" id="spd" min="1" max="10"></label>
+  <div class="row"><button class="primary" id="go">Light up the grid</button><button id="replay" hidden>Replay</button><button id="skip" hidden>Skip</button></div>
+  <label class="chk" style="margin-top:10px"><input type="checkbox" id="rej" checked> Show skipped wires</label>
+  <p id="msg" role="alert"></p>
+  <h2>Result</h2><div id="out"></div>
+  <h2>Save and export</h2>
+  <div class="row wrap"><button id="xjson">Export JSON</button><button id="ijson">Import JSON</button><button id="xcsv" disabled>Export CSV</button><button id="xpng">Export PNG</button></div>
+  <input type="file" id="file" accept=".json,application/json" hidden>
+</aside>
+</main>
+</div>
+<script>
+/*SOLVER*/
+const RV={x0:470,x1:540,k:2.5};
+function cost(a,b,river){
+  const L=Math.hypot(a.x-b.x,a.y-b.y);if(!river||!L)return L;
+  const dx=b.x-a.x;let f;
+  if(!dx)f=a.x>RV.x0&&a.x<RV.x1?1:0;
+  else{const t0=(RV.x0-a.x)/dx,t1=(RV.x1-a.x)/dx;f=Math.max(0,Math.min(1,Math.max(t0,t1))-Math.max(0,Math.min(t0,t1)))}
+  return L*(1+(RV.k-1)*f);                                  // the part of the wire over water costs more
+}
+function mkUF(n){const p=[...Array(n).keys()];const f=x=>{while(p[x]!==x){p[x]=p[p[x]];x=p[x]}return x};return{f,u:(a,b)=>{a=f(a);b=f(b);if(a===b)return false;p[b]=a;return true}}}
+function solve(nodes,alg,lim,river){
+  const n=nodes.length,idx=new Map(nodes.map((v,i)=>[v.id,i])),edges=[];
+  for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){
+    const a=nodes[i],b=nodes[j],virtual=a.type==='source'&&b.type==='source';   // sources share a zero-cost bus
+    const w=virtual?0:cost(a,b,river);
+    if(!virtual&&lim&&w>lim)continue;
+    edges.push({from:a.id,to:b.id,weight:w,virtual});
+  }
+  const mst=[],steps=[];
+  if(alg==='prim'){
+    const adj=nodes.map(()=>[]),seen=Array(n).fill(false),dist=Array(n).fill(Infinity),via=Array(n).fill(null);
+    for(const e of edges){const a=idx.get(e.from),b=idx.get(e.to);adj[a].push([b,e]);adj[b].push([a,e])}
+    const roots=[...Array(n).keys()].sort((a,b)=>(nodes[b].type==='source')-(nodes[a].type==='source'));
+    for(const r of roots){
+      if(seen[r])continue;dist[r]=0;
+      for(;;){
+        let u=-1;for(let i=0;i<n;i++)if(!seen[i]&&dist[i]<Infinity&&(u<0||dist[i]<dist[u]))u=i;
+        if(u<0)break;seen[u]=true;
+        if(via[u]){mst.push(via[u]);steps.push({edge:via[u],accepted:true})}
+        for(const[v,e]of adj[u])if(!seen[v]&&e.weight<dist[v]){dist[v]=e.weight;via[v]=e}
+      }
+    }
+  }else{
+    const uf=mkUF(n);let comps=n;
+    for(const e of edges.sort((a,b)=>a.weight-b.weight)){
+      const ok=uf.u(idx.get(e.from),idx.get(e.to));steps.push({edge:e,accepted:ok});
+      if(ok){mst.push(e);if(--comps===1)break}
+    }
+  }
+  const uf=mkUF(n);mst.forEach(e=>uf.u(idx.get(e.from),idx.get(e.to)));
+  const src=nodes.filter(v=>v.type==='source'),powered=new Set(src.map(s=>uf.f(idx.get(s.id))));
+  const unreachable=nodes.filter(v=>v.type==='building'&&!powered.has(uf.f(idx.get(v.id)))).map(v=>v.id);
+  const r2=x=>Math.round(x*100)/100;
+  const totalLength=r2(mst.filter(e=>!e.virtual).reduce((s,e)=>s+e.weight,0));
+  const starLength=r2(nodes.filter(v=>v.type==='building').reduce((s,b)=>s+Math.min(...src.map(o=>cost(o,b,river))),0));
+  const connected=src.length>0&&!unreachable.length;
+  return{algorithm:alg,connected,unreachable,totalLength,starLength,savingsPct:connected&&starLength?r2((1-totalLength/starLength)*100):0,edges:mst,steps};
+}
+/*END*/
+
+(()=>{
+const $=s=>document.querySelector(s),cv=$('#cv'),W=1000,H=640,KEY='gridmst:v3',TK='gridmst:theme';
+const calm=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const N=(id,type,x,y)=>({id,type,x,y});
+const PRE={
+  village:()=>[N('S1','source',140,320),N('B1','building',300,180),N('B2','building',330,440),N('B3','building',500,300),N('B4','building',640,150),N('B5','building',690,470),N('B6','building',850,320)],
+  campus:()=>{const o=[N('S1','source',90,320)];let k=1;for(let c=0;c<4;c++)for(let r=0;r<3;r++)o.push(N('B'+k++,'building',300+c*170,140+r*180));return o},
+  ring:()=>{const o=[N('S1','source',500,320)];for(let i=0;i<10;i++){const a=i/10*Math.PI*2;o.push(N('B'+(i+1),'building',Math.round(500+Math.cos(a)*300),Math.round(320+Math.sin(a)*230)))}return o},
+  random:()=>{const R=(a,b)=>Math.round(a+Math.random()*(b-a));const o=[N('S1','source',R(80,260),R(80,560))];for(let i=1;i<=14;i++)o.push(N('B'+i,'building',R(60,940),R(60,580)));return o},
+  clear:()=>[]
+};
+let st={nodes:PRE.village(),alg:'kruskal',max:'',rate:1000,river:false,spd:5},tool='building',sel=null,res=null,shown=0,timer=null,drag=null,litCount=0;
+
+function clean(raw){
+  if(!raw||!Array.isArray(raw.nodes))throw new Error('No node list found.');
+  const seen=new Set();
+  const nodes=raw.nodes.map(n=>{
+    const id=String(n&&n.id).replace(/[^\w-]/g,'').slice(0,20);
+    if(!id||seen.has(id))throw new Error('Node ids must be unique and non-empty.');
+    if(!['source','building'].includes(n.type)||!isFinite(n.x)||!isFinite(n.y))throw new Error('Node '+id+' needs type, x and y.');
+    seen.add(id);return N(id,n.type,+n.x,+n.y);
+  });
+  return{nodes,alg:raw.algorithm==='prim'?'prim':'kruskal',max:String(raw.maxWireLength||''),rate:isFinite(raw.rate)?+raw.rate:1000,river:!!raw.river,spd:Math.min(10,Math.max(1,+raw.spd||5))};
+}
+const pack=()=>({nodes:st.nodes,algorithm:st.alg,maxWireLength:st.max,rate:st.rate,river:st.river,spd:st.spd});
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(pack()))}catch(e){}};
+try{const s=localStorage.getItem(KEY);if(s)st=clean(JSON.parse(s))}catch(e){}
+try{document.documentElement.dataset.theme=localStorage.getItem(TK)||'dark'}catch(e){document.documentElement.dataset.theme='dark'}
+
+const msg=(t,c)=>{const m=$('#msg');m.textContent=t||'';m.className=c||''};
+const stop=()=>{clearTimeout(timer);timer=null};
+function invalidate(){stop();res=null;shown=0;msg('');save()}
+const colors=()=>{const s=getComputedStyle(document.documentElement),g=n=>s.getPropertyValue(n).trim();return{map:g('--map'),grid:g('--grid'),grid2:g('--grid2'),ink:g('--ink'),wire:g('--wire'),flow:g('--flow'),lit:g('--lit'),unlit:g('--unlit'),bad:g('--bad'),river:g('--river')}};
+
+function render(){
+  const C=colors(),by=new Map(st.nodes.map(n=>[n.id,n])),vis=res?res.steps.slice(0,shown):[],last=vis[vis.length-1];
+  const acc=vis.filter(s=>s.accepted).map(s=>s.edge),rej=$('#rej').checked?vis.filter(s=>!s.accepted).map(s=>s.edge):[];
+  const done=!!res&&shown>=res.steps.length,phase=-Math.round(performance.now()%1000);
+  const idx=new Map(st.nodes.map((n,i)=>[n.id,i])),uf=mkUF(st.nodes.length);
+  acc.forEach(e=>uf.u(idx.get(e.from),idx.get(e.to)));
+  const roots=new Set(st.nodes.filter(n=>n.type==='source').map(n=>uf.f(idx.get(n.id))));
+  const isLit=n=>roots.has(uf.f(idx.get(n.id)));
+  litCount=st.nodes.filter(n=>n.type==='building'&&isLit(n)).length;
+  // orient wires away from the source so the current flows outward
+  const depth=new Map(),adj=new Map();
+  acc.forEach(e=>{(adj.get(e.from)||adj.set(e.from,[]).get(e.from)).push(e.to);(adj.get(e.to)||adj.set(e.to,[]).get(e.to)).push(e.from)});
+  const q=st.nodes.filter(n=>n.type==='source').map(n=>(depth.set(n.id,0),n.id));
+  while(q.length){const u=q.shift();for(const v of adj.get(u)||[])if(!depth.has(v)){depth.set(v,depth.get(u)+1);q.push(v)}}
+  const ln=(e,a,sw)=>{let p=by.get(e.from),r=by.get(e.to);if(!p||!r)return'';if(sw&&(depth.get(e.to)<depth.get(e.from)))[p,r]=[r,p];return`<line x1="${p.x}" y1="${p.y}" x2="${r.x}" y2="${r.y}" ${a}/>`};
+  const txt=`font-family="sans-serif" font-size="12" font-weight="600" fill="${C.ink}" text-anchor="middle" paint-order="stroke" stroke="${C.map}" stroke-width="4" pointer-events="none"`;
+  let h=`<defs><pattern id="g1" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="${C.grid}"/></pattern><pattern id="g2" width="200" height="200" patternUnits="userSpaceOnUse"><path d="M200 0H0V200" fill="none" stroke="${C.grid2}" stroke-width="1.5"/></pattern>
+<radialGradient id="halo"><stop offset="0" stop-color="${C.lit}" stop-opacity=".5"/><stop offset="1" stop-color="${C.lit}" stop-opacity="0"/></radialGradient>
+<filter id="glow" filterUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><feGaussianBlur stdDeviation="3.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+<rect width="${W}" height="${H}" fill="${C.map}"/><rect width="${W}" height="${H}" fill="url(#g1)" pointer-events="none"/><rect width="${W}" height="${H}" fill="url(#g2)" pointer-events="none"/>`;
+  if(st.river)h+=`<rect x="${RV.x0}" y="0" width="${RV.x1-RV.x0}" height="${H}" fill="${C.river}" opacity=".7" pointer-events="none"/><text ${txt} x="${(RV.x0+RV.x1)/2}" y="22" opacity=".8">river ×${RV.k}</text>`;
+  rej.forEach(e=>h+=ln(e,`stroke="${C.bad}" stroke-width="1.5" stroke-dasharray="5 6" opacity=".55"`));
+  if(timer&&last&&!last.accepted)h+=ln(last.edge,`stroke="${C.bad}" stroke-width="3" stroke-linecap="round"`);
+  h+=`<g filter="url(#glow)">`;
+  acc.forEach((e,i)=>{const fresh=timer&&i===acc.length-1&&last&&last.accepted&&!calm;
+    h+=ln(e,e.virtual?`stroke="${C.wire}" stroke-width="2" stroke-dasharray="1 7" stroke-linecap="round"`:`stroke="${C.wire}" stroke-width="3.5" stroke-linecap="round"${fresh?' pathLength="1" class="draw"':''}`)});
+  h+=`</g>`;
+  if(done&&!calm)acc.filter(e=>!e.virtual).forEach(e=>h+=ln(e,`stroke="${C.flow}" stroke-width="2" stroke-linecap="round" stroke-dasharray="3 15" class="flow" style="animation-delay:${phase}ms" opacity=".85"`,true));
+  acc.filter(e=>!e.virtual).forEach(e=>{const p=by.get(e.from),r=by.get(e.to);h+=`<text ${txt} x="${(p.x+r.x)/2}" y="${(p.y+r.y)/2-7}">${Math.round(e.weight)}</text>`});
+  st.nodes.forEach(n=>{
+    const x=n.x,y=n.y,on=isLit(n);
+    h+=`<g data-id="${n.id}" style="cursor:grab"><circle cx="${x}" cy="${y}" r="26" fill="transparent"/>`;
+    if(n.type==='source'){
+      h+=`<circle cx="${x}" cy="${y}" r="44" fill="url(#halo)"/>`;
+      if(!calm)[0,-1200].forEach(d=>h+=`<circle class="ring" cx="${x}" cy="${y}" r="16" fill="none" stroke="${C.lit}" stroke-width="2" style="animation-delay:${d+phase}ms"/>`);
+      h+=`<polygon points="${[0,1,2,3,4,5].map(k=>`${(x+17*Math.cos(k*Math.PI/3-Math.PI/2)).toFixed(1)},${(y+17*Math.sin(k*Math.PI/3-Math.PI/2)).toFixed(1)}`).join(' ')}" fill="${C.lit}" stroke="${C.map}" stroke-width="3"/><path d="M${x+2} ${y-9}L${x-6} ${y+2}h5l-2 7 8-11h-5z" fill="${C.map}"/>`;
+    }else{
+      if(on)h+=`<circle cx="${x}" cy="${y}" r="40" fill="url(#halo)"/>`;
+      h+=`<rect x="${x-11}" y="${y-11}" width="22" height="22" rx="5" fill="${on?C.lit:C.unlit}" stroke="${C.map}" stroke-width="2"/>`;
+      [[-7,-7],[3,-7],[-7,3],[3,3]].forEach(([a,b])=>h+=`<rect x="${x+a}" y="${y+b}" width="4" height="4" rx="1" fill="${on?'#fff7dc':C.map}" opacity="${on?1:.7}"/>`);
+    }
+    if(sel===n.id)h+=`<circle cx="${x}" cy="${y}" r="27" fill="none" stroke="${C.wire}" stroke-width="2" stroke-dasharray="3 3"/>`;
+    h+=`<text ${txt} x="${x}" y="${y+(n.type==='source'?36:29)}">${n.id}</text></g>`;
+  });
+  cv.innerHTML=h;cv.style.cursor=tool==='select'?'default':'crosshair';
+}
+
+function ui(){
+  const b=st.nodes.filter(n=>n.type==='building').length,done=res&&shown>=res.steps.length;
+  let t='Place a source and some buildings, then light up the grid.',c='';
+  if(res){
+    const v=res.steps.slice(0,shown),l=v[v.length-1];
+    if(!done&&l)t=`Step ${shown} of ${res.steps.length}: ${l.edge.from} – ${l.edge.to} ${l.accepted?'wired':'skipped, it would close a loop'}. ${litCount} of ${b} lit.`;
+    else if(done){c=res.connected?'good':'bad';t=res.connected?`All ${b} buildings are lit.`:`${res.unreachable.join(', ')} stay dark: out of reach within the wire limit.`}
+  }
+  const s=$('#status');s.textContent=t;s.className='glass '+c;
+  $('#del').disabled=!sel;$('#del').textContent=sel?`Delete ${sel}`:'Delete selected';
+  $('#replay').hidden=!res;$('#skip').hidden=!res||done;$('#xcsv').disabled=!res;
+  [...$('#tools').children].forEach(x=>x.classList.toggle('on',x.dataset.tool===tool));
+  [...$('#algs').children].forEach(x=>x.classList.toggle('on',x.dataset.alg===st.alg));
+  $('#theme').textContent=document.documentElement.dataset.theme==='dark'?'Day':'Night';
+  const out=$('#out');
+  if(!res){out.innerHTML='<p class="muted">Nothing computed yet.</p>';return}
+  const acc=res.steps.slice(0,shown).filter(x=>x.accepted).map(x=>x.edge).filter(e=>!e.virtual);
+  const len=done?res.totalLength:acc.reduce((a,e)=>a+e.weight,0),pct=res.starLength?Math.min(100,len/res.starLength*100):0;
+  out.innerHTML=`<div class="tiles"><div class="tile"><b>${Math.round(len)} m</b><span>wire needed</span></div><div class="tile"><b>₹${Math.round(len*st.rate).toLocaleString('en-IN')}</b><span>wiring cost</span></div><div class="tile"><b>${litCount} / ${b}</b><span>buildings lit</span></div><div class="tile"><b>${res.connected?res.savingsPct+'%':'–'}</b><span>saved vs direct lines</span></div></div>`
+   +`<div class="bars"><div><span>Direct lines</span><i style="width:100%"></i><em>${Math.round(res.starLength)} m</em></div><div><span>Your grid</span><i style="width:${pct}%"></i><em>${Math.round(len)} m</em></div></div>`
+   +(done&&!res.connected?`<p class="bad">Warning: ${res.unreachable.join(', ')} left unpowered.</p>`:'')
+   +`<div class="tw"><table><thead><tr><th>Wire</th><th>Length (m)</th></tr></thead><tbody>${acc.map(e=>`<tr><td>${e.from} – ${e.to}</td><td>${e.weight.toFixed(1)}</td></tr>`).join('')}</tbody></table></div>`;
+}
+const draw=()=>{render();ui()};
+
+function add(type,x,y){
+  const p=type==='source'?'S':'B',max=st.nodes.filter(n=>n.type===type).reduce((m,n)=>Math.max(m,parseInt(n.id.slice(1))||0),0);
+  const id=p+(max+1);st.nodes.push(N(id,type,x,y));sel=id;invalidate();draw();
+}
+const pt=e=>{const r=cv.getBoundingClientRect();return{x:Math.round(Math.min(W-18,Math.max(18,(e.clientX-r.left)*W/r.width))),y:Math.round(Math.min(H-18,Math.max(18,(e.clientY-r.top)*H/r.height)))}};
+cv.addEventListener('pointerdown',e=>{
+  const g=e.target.closest('[data-id]'),p=pt(e);
+  if(g){sel=g.dataset.id;drag=sel;cv.setPointerCapture(e.pointerId);draw();return}
+  if(tool==='select'){sel=null;draw();return}
+  add(tool,p.x,p.y);
+});
+cv.addEventListener('pointermove',e=>{if(!drag)return;const n=st.nodes.find(v=>v.id===drag);if(!n)return;const p=pt(e);if(p.x===n.x&&p.y===n.y)return;n.x=p.x;n.y=p.y;invalidate();draw()});
+['pointerup','pointercancel'].forEach(t=>cv.addEventListener(t,()=>{drag=null}));
+const del=()=>{if(!sel)return;st.nodes=st.nodes.filter(n=>n.id!==sel);sel=null;invalidate();draw()};
+addEventListener('keydown',e=>{if(/INPUT|SELECT|TEXTAREA/.test(e.target.tagName))return;if((e.key==='Delete'||e.key==='Backspace')&&sel){e.preventDefault();del()}});
+$('#del').onclick=del;
+$('#tools').onclick=e=>{const b=e.target.closest('button');if(b){tool=b.dataset.tool;draw()}};
+$('#algs').onclick=e=>{const b=e.target.closest('button');if(b){st.alg=b.dataset.alg;invalidate();draw()}};
+$('#pre').onclick=e=>{const b=e.target.closest('button');if(b){st.nodes=PRE[b.dataset.pre]();sel=null;invalidate();draw()}};
+$('#theme').onclick=()=>{const d=document.documentElement,t=d.dataset.theme==='dark'?'light':'dark';d.dataset.theme=t;try{localStorage.setItem(TK,t)}catch(e){}draw()};
+
+const bind=(id,k,f,prop='value')=>{const el=$(id);el[prop]=st[k];el.oninput=()=>{st[k]=f?f(el[prop]):el[prop];invalidate();draw()}};
+bind('#max','max');bind('#rate','rate',v=>Math.max(0,+v||0));bind('#river','river',v=>v,'checked');bind('#spd','spd',v=>+v);
+$('#rej').onchange=draw;
+
+const tick=()=>{timer=setTimeout(()=>{shown++;if(shown>=res.steps.length)timer=null;else tick();draw()},900-st.spd*80)};
+const play=()=>{stop();tick()};
+$('#go').onclick=()=>{
+  invalidate();
+  if(!st.nodes.some(n=>n.type==='source'))return msg('Add at least one power source (amber hexagon).','bad');
+  if(!st.nodes.some(n=>n.type==='building'))return msg('Add at least one building.','bad');
+  const lim=st.max.trim()===''?null:Number(st.max);
+  if(lim!==null&&!(lim>0))return msg('Max wire length must be a positive number, or empty for no limit.','bad');
+  res=solve(st.nodes,st.alg,lim,st.river);
+  shown=calm?res.steps.length:0;if(!calm)play();draw();
+};
+$('#replay').onclick=()=>{shown=0;play();draw()};
+$('#skip').onclick=()=>{stop();shown=res.steps.length;draw()};
+
+const dl=(name,blob)=>{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
+$('#xjson').onclick=()=>dl('grid-project.json',new Blob([JSON.stringify(pack(),null,2)],{type:'application/json'}));
+$('#xcsv').onclick=()=>{if(res)dl('wires.csv',new Blob(['from,to,effective_length_m\n'+res.edges.filter(e=>!e.virtual).map(e=>`${e.from},${e.to},${e.weight.toFixed(2)}`).join('\n')],{type:'text/csv'}))};
+$('#xpng').onclick=()=>{
+  const url=URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(cv)],{type:'image/svg+xml'})),img=new Image();
+  img.onload=()=>{const c=document.createElement('canvas');c.width=W*2;c.height=H*2;c.getContext('2d').drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);c.toBlob(b=>b&&dl('grid-layout.png',b))};
+  img.src=url;
+};
+$('#ijson').onclick=()=>$('#file').click();
+$('#file').onchange=async e=>{
+  const f=e.target.files[0];if(!f)return;
+  try{st=clean(JSON.parse(await f.text()));sel=null;invalidate();$('#max').value=st.max;$('#rate').value=st.rate;$('#river').checked=st.river;$('#spd').value=st.spd;draw()}
+  catch(err){msg('Import failed: '+err.message,'bad')}
+  e.target.value='';
+};
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',draw);
+draw();
+})();
+</script>
+</body>
+</html>

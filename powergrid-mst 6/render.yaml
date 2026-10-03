@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: powergrid-api
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: CORS_ORIGIN
+        value: https://YOUR_GITHUB_USERNAME.github.io
